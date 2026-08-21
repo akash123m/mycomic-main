@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import { db } from "@/lib/db";
+import { getReaderSession } from "@/lib/auth";
+export async function POST(_:Request,{params}:{params:Promise<{id:string}>}){const session=await getReaderSession();if(!session)return NextResponse.json({error:"Reader login required"},{status:401});const{id}=await params;if(id.startsWith("demo-"))return NextResponse.json({error:"Database catalog unavailable"},{status:503});const viewedOn=new Date().toISOString().slice(0,10);try{const updated=await db.$transaction(async tx=>{await tx.chapterView.create({data:{chapterId:id,viewerKey:session.id,viewedOn}});return tx.chapter.update({where:{id},data:{views:{increment:1}},select:{views:true}})});return NextResponse.json({counted:true,views:updated.views})}catch(error){if(error instanceof Prisma.PrismaClientKnownRequestError&&error.code==="P2002"){const chapter=await db.chapter.findUnique({where:{id},select:{views:true}});return NextResponse.json({counted:false,views:chapter?.views??0})}return NextResponse.json({error:"Failed to record chapter view"},{status:500})}}

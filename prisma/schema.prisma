@@ -1,0 +1,270 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Admin User ─────────────────────────────────────────────────────────────
+enum Role {
+  READER
+  AUTHOR
+  ADMIN
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ContactStatus {
+  NEW
+  READ
+  RESOLVED
+}
+
+enum SubscriberStatus {
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+model User {
+  id                 String            @id @default(cuid())
+  email              String            @unique
+  username           String?           @unique
+  passwordHash       String
+  name               String
+  role               Role              @default(READER)
+  avatarUrl          String?
+  bio                String?
+  isSuspended        Boolean           @default(false)
+  mustChangePassword Boolean           @default(false)
+  readingHistory     ReadingHistory[]
+  submissions        ComicSubmission[]
+  submittedComics    Comic[]           @relation("SubmittedBy")
+  likedComics        UserLike[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email, createdAt])
+}
+
+model NewsletterSubscriber {
+  id        String           @id @default(cuid())
+  email     String           @unique
+  status    SubscriberStatus @default(ACTIVE)
+  source    String           @default("website")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([status, createdAt])
+}
+
+// ── Comic ──────────────────────────────────────────────────────────────────
+model Comic {
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  title          String
+  synopsis       String
+  coverImage     String
+  bannerImage    String
+  author         String            @default("MyComic Studio")
+  artist         String            @default("MyComic Studio")
+  status         String            @default("ongoing")
+  rating         Float             @default(5.0)
+  ratingCount    Int               @default(0)
+  views          Int               @default(0)
+  likes          Int               @default(0)
+  isFeatured     Boolean           @default(false)
+  isVisible      Boolean           @default(true)
+  submittedById  String?
+  submittedBy    User?             @relation("SubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  genres         ComicGenre[]
+  chapters       Chapter[]
+  ratings        Rating[]
+  comments       Comment[]
+  readingHistory ReadingHistory[]
+  viewEvents     ComicView[]
+  userLikes      UserLike[]
+  submissions    ComicSubmission[] @relation("PublishedSubmission")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model ComicView {
+  id        String   @id @default(cuid())
+  comicId   String
+  comic     Comic    @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  viewerKey String
+  viewedOn  String
+  createdAt DateTime @default(now())
+
+  @@unique([comicId, viewerKey, viewedOn])
+  @@index([comicId, createdAt])
+}
+
+model UserLike {
+  userId    String
+  comicId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comic     Comic    @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@id([userId, comicId])
+  @@index([userId, createdAt])
+}
+
+model ChapterView {
+  id        String   @id @default(cuid())
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  viewerKey String
+  viewedOn  String
+  createdAt DateTime @default(now())
+  @@unique([chapterId, viewerKey, viewedOn])
+  @@index([chapterId, createdAt])
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  comicId   String
+  comic     Comic    @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  value     Int
+  userIp    String   @default("anonymous")
+  createdAt DateTime @default(now())
+
+  @@unique([comicId, userIp])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  comicId    String
+  comic      Comic    @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  userName   String   @default("ComicFan")
+  userAvatar String?
+  content    String
+  likes      Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model Genre {
+  id     String       @id @default(cuid())
+  name   String       @unique
+  icon   String       @default("📚")
+  comics ComicGenre[]
+}
+
+model ComicGenre {
+  comicId String
+  genreId String
+  comic   Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  genre   Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([comicId, genreId])
+}
+
+// ── Chapter & Pages ────────────────────────────────────────────────────────
+model Chapter {
+  id             String           @id @default(cuid())
+  comicId        String
+  comic          Comic            @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  number         Int
+  title          String
+  pdfUrl         String?
+  publishedAt    DateTime         @default(now())
+  views          Int              @default(0)
+  isVisible      Boolean          @default(true)
+  approvalStatus SubmissionStatus @default(PENDING)
+  reviewNote     String?
+  pages          ChapterPage[]
+  viewEvents     ChapterView[]
+  readingHistory ReadingHistory[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([comicId, number])
+}
+
+model ReadingHistory {
+  id             String   @id @default(cuid())
+  userId         String
+  comicId        String
+  chapterId      String
+  pageIndex      Int      @default(0)
+  scrollPosition Float    @default(0)
+  completed      Boolean  @default(false)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comic          Comic    @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  chapter        Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, comicId])
+  @@index([userId, updatedAt])
+}
+
+model ComicSubmission {
+  id           String           @id @default(cuid())
+  userId       String
+  title        String
+  description  String
+  storyContent String?
+  contentUrl   String?
+  coverUrl     String?
+  status       SubmissionStatus @default(PENDING)
+  reviewNote   String?
+  comicId      String?
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comic        Comic?           @relation("PublishedSubmission", fields: [comicId], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model ChapterPage {
+  id         String  @id @default(cuid())
+  chapterId  String
+  chapter    Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  pageNumber Int
+  imageUrl   String
+
+  @@unique([chapterId, pageNumber])
+}
+
+// ── Site Settings & Theme Control ──────────────────────────────────────────
+model SiteSettings {
+  id             String @id @default("global")
+  primaryColor   String @default("#9dfb2b")
+  secondaryColor String @default("#da009d")
+  tertiaryColor  String @default("#079ea8")
+
+  showHeroBanner       Boolean @default(true)
+  showFeaturedSection  Boolean @default(true)
+  showTrendingSection  Boolean @default(true)
+  showAllComicsSection Boolean @default(true)
+  showHowItWorks       Boolean @default(true)
+  showGenresSection    Boolean @default(true)
+  showNewsletter       Boolean @default(true)
+  showCreatorSection   Boolean @default(true)
+
+  heroTitle    String @default("DISCOVER. READ. REMEMBER.")
+  heroSubtitle String @default("Where stories come alive, one panel at a time.")
+  footerText   String @default("Where stories come alive, one panel at a time.")
+
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,2 @@
+import ReaderAuthForm from "@/components/reader/ReaderAuthForm";
+export default function AuthorSignInPage() { return <main className="author-auth-page"><div className="author-auth-copy"><p className="section-label">Independent creators</p><h1>Your story belongs on the page.</h1><p>Sign in to submit original series, track editorial review, and manage your creator profile.</p><ul><li>Original work submissions</li><li>Private review status</li><li>Reading and audience insights</li></ul></div><ReaderAuthForm mode="signin" audience="author" /></main>; }

@@ -1,0 +1,3 @@
+import type { MetadataRoute } from "next";
+import { demoComics } from "@/lib/demo-data";
+export default function sitemap():MetadataRoute.Sitemap{const base=process.env.NEXT_PUBLIC_SITE_URL||"http://localhost:3000";const staticRoutes=["","/genres","/about","/contact","/signin","/signup","/author/signin","/author/signup","/terms","/privacy","/report"];return [...staticRoutes.map((path)=>({url:`${base}${path}`,lastModified:new Date(),changeFrequency:"weekly" as const,priority:path===""?1:.6})),...demoComics.map((comic)=>({url:`${base}/comic/${comic.slug}`,lastModified:new Date(comic.updatedAt),changeFrequency:"weekly" as const,priority:.9}))]}

@@ -1,0 +1,2 @@
+import ReaderAuthForm from "@/components/reader/ReaderAuthForm";
+export default function SignInPage() { return <main style={{ minHeight: "calc(100dvh - 128px)", display: "grid", placeItems: "center", padding: "32px 16px" }}><div style={{display:"grid",gap:8,justifyItems:"center",width:"100%"}}><ReaderAuthForm mode="signin" /><p style={{color:"var(--color-text-secondary)",fontSize:14}}>Are you a creator? <a href="/author/signin" style={{color:"var(--color-primary)",fontWeight:700}}>Open author access →</a></p></div></main>; }

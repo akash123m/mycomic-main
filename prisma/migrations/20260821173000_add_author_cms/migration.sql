@@ -1,0 +1,10 @@
+ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'AUTHOR';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "username" TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS "User_username_key" ON "User"("username");
+ALTER TABLE "Chapter" ADD COLUMN IF NOT EXISTS "approvalStatus" "SubmissionStatus" NOT NULL DEFAULT 'APPROVED';
+ALTER TABLE "Chapter" ADD COLUMN IF NOT EXISTS "reviewNote" TEXT;
+ALTER TABLE "Chapter" ALTER COLUMN "approvalStatus" SET DEFAULT 'PENDING';
+CREATE TABLE IF NOT EXISTS "ChapterView" ("id" TEXT NOT NULL, "chapterId" TEXT NOT NULL, "viewerKey" TEXT NOT NULL, "viewedOn" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "ChapterView_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX IF NOT EXISTS "ChapterView_chapterId_viewerKey_viewedOn_key" ON "ChapterView"("chapterId","viewerKey","viewedOn");
+CREATE INDEX IF NOT EXISTS "ChapterView_chapterId_createdAt_idx" ON "ChapterView"("chapterId","createdAt");
+DO $$ BEGIN ALTER TABLE "ChapterView" ADD CONSTRAINT "ChapterView_chapterId_fkey" FOREIGN KEY ("chapterId") REFERENCES "Chapter"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;

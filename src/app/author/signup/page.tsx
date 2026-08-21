@@ -1,0 +1,2 @@
+import ReaderAuthForm from "@/components/reader/ReaderAuthForm";
+export default function AuthorSignUpPage() { return <main className="author-auth-page"><div className="author-auth-copy"><p className="section-label">Independent creators</p><h1>Publish something unforgettable.</h1><p>Create a creator account, then submit your original manhwa for editorial review.</p><ul><li>You retain ownership</li><li>Every series is reviewed</li><li>Reader accounts include creator tools</li></ul></div><ReaderAuthForm mode="signup" audience="author" /></main>; }
